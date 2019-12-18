@@ -2,12 +2,16 @@
 
 import sys
 
+
+
 class CPU:
     """Main CPU class."""
 
     def __init__(self):
         """Construct a new CPU."""
-        pass
+        self.reg = [0] * 8
+        self.pc = 0
+        self.ram = [0] * 8
 
     def load(self):
         """Load a program into memory."""
@@ -60,6 +64,39 @@ class CPU:
 
         print()
 
+    def ram_read(self, mar):
+        return self.ram[mar]
+    
+    def ram_write(self, mdr, mar):
+        self.ram[mar] = mdr
+        return mdr
+
     def run(self):
         """Run the CPU."""
-        pass
+        halted = False
+
+        while not halted:
+            instruction = self.ram[self.pc]
+
+            if instruction == 0b10000010:
+                reg_num = self.ram_read(self.pc + 1)
+                value = self.ram_read(self.pc + 2)
+
+                self.reg[reg_num] = value
+
+                self.pc += 3
+
+            elif instruction == 0b01000111:
+                reg_num = self.ram_read(self.pc + 1)
+                print(self.reg[reg_num])
+
+                self.pc += 2
+
+            elif instruction == 0b00000001:
+                halted = True
+
+                self.pc += 1
+
+            else:
+                print(f"Unknown instructions at index {self.pc}")
+                sys.exit(1) 
