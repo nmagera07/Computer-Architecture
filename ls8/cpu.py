@@ -6,6 +6,10 @@ HLT = 0b00000001
 LDI = 0b10000010
 PRN = 0b01000111
 MUL = 0b10100010
+POP = 0b01000110
+PUSH = 0b01000101
+
+stack_pointer = 7
 
 class CPU:
     """Main CPU class."""
@@ -20,6 +24,9 @@ class CPU:
         self.branchtable[LDI] = self.handle_ldi
         self.branchtable[PRN] = self.handle_prn
         self.branchtable[MUL] = self.handle_mul
+        self.branchtable[POP] = self.handle_pop
+        self.branchtable[PUSH] = self.handle_push
+        self.reg[stack_pointer] = 0xf4
         self.halted = False
 
     def load(self):
@@ -119,7 +126,17 @@ class CPU:
     def handle_hlt(self):
         self.halted = True
 
+    def handle_pop(self):
+        value = self.ram[self.reg[stack_pointer]]
+        reg_num = self.ram_read(self.pc + 1)
+        self.reg[reg_num] = value
+        self.reg[stack_pointer] += 1
 
+    def handle_push(self):
+        self.reg[stack_pointer] -= 1
+        reg_num = self.ram_read(self.pc + 1)
+        value = self.reg[reg_num]
+        self.ram[self.reg[stack_pointer]] = value
 
     def run(self):
         """Run the CPU."""
