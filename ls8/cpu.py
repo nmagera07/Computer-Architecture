@@ -6,8 +6,13 @@ HLT = 0b00000001
 LDI = 0b10000010
 PRN = 0b01000111
 MUL = 0b10100010
+ADD = 0b10100000
 POP = 0b01000110
 PUSH = 0b01000101
+CALL = 0b01010000
+RET = 0b00010001
+
+
 
 stack_pointer = 7
 
@@ -20,13 +25,18 @@ class CPU:
         self.pc = 0
         self.ram = [0] * 256
         self.branchtable = {}
-        self.branchtable[HLT] = self.handle_hlt
-        self.branchtable[LDI] = self.handle_ldi
-        self.branchtable[PRN] = self.handle_prn
-        self.branchtable[MUL] = self.handle_mul
-        self.branchtable[POP] = self.handle_pop
-        self.branchtable[PUSH] = self.handle_push
+        self.branchtable[HLT] = self.hlt
+        self.branchtable[LDI] = self.ldi
+        self.branchtable[PRN] = self.prn
+        self.branchtable[MUL] = self.mul
+        self.branchtable[ADD] = self.add
+        self.branchtable[POP] = self.pop
+        self.branchtable[PUSH] = self.push
+        self.branchtable[CALL] = self.call
+        self.branchtable[RET] = self.ret
+
         self.reg[stack_pointer] = 0xf4
+
         self.halted = False
 
     def load(self):
@@ -107,36 +117,56 @@ class CPU:
     def ram_write(self, mdr, mar):
         self.ram[mar] = mdr
     
-    def handle_ldi(self):
+    def ldi(self):
         reg_num = self.ram_read(self.pc + 1)
         value = self.ram_read(self.pc + 2)
 
         self.reg[reg_num] = value
 
-    def handle_prn(self):
+    def prn(self):
         reg_num = self.ram_read(self.pc + 1)
         print(self.reg[reg_num])
 
-    def handle_mul(self):
+    def mul(self):
         num1 = self.ram_read(self.pc + 1)
         num2 = self.ram_read(self.pc + 2)
         
         self.alu("MUL", num1, num2)
 
-    def handle_hlt(self):
+    def add(self):
+        num1 = self.ram_read(self.pc + 1)
+        num2 = self.ram_read(self.pc + 2)
+        
+        self.alu("ADD", num1, num2)
+
+    def hlt(self):
         self.halted = True
 
-    def handle_pop(self):
+    def pop(self):
         value = self.ram[self.reg[stack_pointer]]
         reg_num = self.ram_read(self.pc + 1)
         self.reg[reg_num] = value
         self.reg[stack_pointer] += 1
 
-    def handle_push(self):
+    def push(self):
         self.reg[stack_pointer] -= 1
         reg_num = self.ram_read(self.pc + 1)
         value = self.reg[reg_num]
         self.ram[self.reg[stack_pointer]] = value
+
+    def call(self):
+        ret_address = self.pc + 2
+        self.reg[stack_pointer] -= 1
+        self.ram[self.reg[stack_pointer]] = ret_address
+
+        reg_num = self.ram_read(self.pc + 1)
+        self.pc = self.reg[reg_num]
+
+    def ret(self):
+        self.pc = self.ram[self.reg[stack_pointer]]
+        self.reg[stack_pointer] += 1
+
+
 
     def run(self):
         """Run the CPU."""
@@ -170,14 +200,14 @@ class CPU:
 
         while self.halted != True:
             ir = self.ram[self.pc]
-            val = ir
-            op_count = val >> 6
+            op_count = ir >> 6
             ir_length = op_count + 1
             
             self.branchtable[ir]()
 
             if ir == 0 or None:
-                print(f"Unknown instructions found at index {self.pc}")
+                print(f"wut is goin on {self.pc}")
                 sys.exit(1)
 
-            self.pc += ir_length
+            if ir != 80 and ir != 17:
+                self.pc += ir_length
