@@ -11,6 +11,10 @@ POP = 0b01000110
 PUSH = 0b01000101
 CALL = 0b01010000
 RET = 0b00010001
+CMP = 0b10100111
+JMP = 0b01010100
+JEQ = 0b01010101
+JNE = 0b01010110
 
 
 
@@ -24,6 +28,7 @@ class CPU:
         self.reg = [0] * 8
         self.pc = 0
         self.ram = [0] * 256
+        self.fl = 0
         self.branchtable = {}
         self.branchtable[HLT] = self.hlt
         self.branchtable[LDI] = self.ldi
@@ -34,6 +39,11 @@ class CPU:
         self.branchtable[PUSH] = self.push
         self.branchtable[CALL] = self.call
         self.branchtable[RET] = self.ret
+        self.branchtable[CMP] = self.cmp
+        self.branchtable[JMP] = self.jmp
+        self.branchtable[JEQ] = self.jeq
+        self.branchtable[JNE] = self.jne 
+
 
         self.reg[stack_pointer] = 0xf4
 
@@ -85,9 +95,18 @@ class CPU:
 
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
-        #elif op == "SUB": etc
+        
         elif op == "MUL":
             self.reg[reg_a] *= self.reg[reg_b]
+
+        elif op == "CMP":
+            if self.reg[reg_a] > self.reg[reg_b]:
+                self.fl = 0b00000010
+            if self.reg[reg_a] < self.reg[reg_b]:
+                self.fl = 0b00000100
+            if self.reg[reg_a] == self.reg[reg_b]:
+                self.fl = 0b00000001
+
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -166,7 +185,30 @@ class CPU:
         self.pc = self.ram[self.reg[stack_pointer]]
         self.reg[stack_pointer] += 1
 
+    def cmp(self):
+        num1 = self.ram_read(self.pc + 1)
+        num2 = self.ram_read(self.pc + 2)
+        self.alu("CMP", num1, num2)
 
+    def jmp(self):
+        reg_num = self.ram_read(self.pc + 1)
+        self.pc = self.reg[reg_num]
+
+    def jeq(self):
+        reg_num = self.ram_read(self.pc + 1)
+
+        if self.fl == 0b00000001:
+            self.pc = self.reg[reg_num]
+        else:
+            self.pc += 2
+
+    def jne(self):
+        reg_num = self.ram_read(self.pc + 1)
+        
+        if self.fl != 0b00000001:
+            self.pc = self.reg[reg_num]
+        else:
+            self.pc += 2
 
     def run(self):
         """Run the CPU."""
@@ -209,5 +251,5 @@ class CPU:
                 print(f"wut is goin on {self.pc}")
                 sys.exit(1)
 
-            if ir != 80 and ir != 17:
+            if ir != 80 and ir != 17 and ir != 84 and ir != 85 and ir != 86:
                 self.pc += ir_length
